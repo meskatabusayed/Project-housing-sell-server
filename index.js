@@ -1,6 +1,7 @@
  const express = require('express');
  const app = express();
  const cors = require('cors');
+ const jwt = require('jsonwebtoken');
  require('dotenv').config()
  const { MongoClient, ObjectId , ServerApiVersion } = require('mongodb');
  const port = process.env.PORT || 5000;
@@ -36,12 +37,78 @@ async function run() {
     const addCollections = client.db('twassignDb').collection('addCollection');
     const reviewCollection = client.db('twassignDb').collection('reviews');
 
+    // jwt related api
+    app.post('/jwt' , async(req , res) => {
+        const user = req.body;
+        const token = jwt.sign(user , process.env.ACCESS_TOKEN_SECRET , {
+            expiresIn: '2h'});
+            res.send({ token });
+    })
+
+    // middlewares
+    const verifyToken = (req , res , next) => {
+        console.log('inside  verify token' ,  req.headers.authorization);
+        if(!req.headers.authorization){
+            return res.status(401).send({ message: 'forbidden access' });
+        }
+
+        const token = req.headers.authorization.split(' ')[1];
+        jwt.verify(token , process.env.ACCESS_TOKEN_SECRET , (err , decoded) => {
+            if(err){
+                return res.status(401).send({ message: 'forbidden access' })
+            }
+            req.decoded = decoded;
+            next();
+        })
+
+
+        // next();
+    }
+
+
+
     // Users Related Api
 
-    app.get('/users' , async(req , res) => {
+    app.get('/users' , verifyToken , async(req , res) => {
+        // console.log(req.headers);
         const result = await UserCollection.find().toArray();
         res.send(result);
     })
+
+    app.get('/users/admin/:email' , verifyToken , async(req , res) => {
+        const email = req.params.email;
+        if(email !== req.decoded.email){
+            return res.status(403).send({ message: 'unauthorized access' })
+        }
+        const query = { email: email };
+        const user = await UserCollection.findOne(query);
+        let admin = false;
+        if(user){
+            admin = user?.role === 'admin'
+        }
+        
+        res.send({ admin });
+
+    })
+
+    // Agent
+    app.get('/users/agent/:email' , verifyToken , async(req , res) => {
+        const email = req.params.email;
+        if(email !== req.decoded.email){
+            return res.status(403).send({ message: 'unauthorized access' })
+        }
+        const query = { email: email };
+        const user = await UserCollection.findOne(query);
+        let agent = false;
+        if(user){
+            agent = user?.role === 'agent'
+        }
+        
+        res.send({ agent });
+
+    })
+
+
 
 
     app.post('/users' , async(req , res) => {
@@ -97,10 +164,61 @@ async function run() {
         res.send(result);
     })
 
+    // individuals Properties
+    app.get('/adds' , async(req , res) => {
+        let query ={};
+        if(req.query?.agentEmail){
+          query = { agentEmail: req.query.agentEmail}
+        } 
+        const result = await addCollections.find(query).toArray();
+        res.send(result);
+        
+      })
+
+      app.get('/adds/:id' , async(req , res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id)}
+        const result = await addCollections.findOne(query);
+        res.send(result);
+      })
+
+      app.patch('/adds/:id' , async(req , res) => {
+        const property = req.body;
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id)}
+        const updatedDoc = {
+            $set: {
+                propertyTitle: property.propertyTitle,
+                propertyLocation: property.propertyLocation,
+                minPrice: property.minPrice,
+                maxPrice: property.maxPrice,
+                propertyImage: property.propertyImage 
+            }
+        }
+
+        const result = await addCollections.updateOne(filter , updatedDoc)
+        res.send(result);
+
+
+      })
+
+    app.post('/add' , async(req , res) => {
+        const item = req.body;
+        const result = await addCollections.insertOne(item);
+        res.send(result);
+    })
+
     app.get('/add/:id' , async(req , res) => {
         const id = req.params.id;
         const query = {_id: new ObjectId(id) };
         const result = await addCollections.findOne(query);
+        res.send(result);
+    })
+
+    app.delete('/add/:id' , async(req , res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) }
+        const result = await addCollections.deleteOne(query);
         res.send(result);
     })
 
