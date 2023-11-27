@@ -2,7 +2,8 @@
  const app = express();
  const cors = require('cors');
  const jwt = require('jsonwebtoken');
- require('dotenv').config()
+ require('dotenv').config();
+ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
  const { MongoClient, ObjectId , ServerApiVersion } = require('mongodb');
  const port = process.env.PORT || 5000;
 
@@ -36,7 +37,10 @@ async function run() {
     const UserCollection = client.db('twassignDb').collection('users');
     const addCollections = client.db('twassignDb').collection('addCollection');
     const reviewCollection = client.db('twassignDb').collection('reviews');
+    const wishCollection = client.db('twassignDb').collection('wishes');
+    const buyCollection = client.db('twassignDb').collection('buys');
 
+    
     // jwt related api
     app.post('/jwt' , async(req , res) => {
         const user = req.body;
@@ -62,7 +66,6 @@ async function run() {
         })
 
 
-        // next();
     }
 
 
@@ -125,6 +128,9 @@ async function run() {
 
     })
 
+   
+    
+
     app.patch('/users/admin/:id' , async(req , res) => {
         const id = req.params.id;
         const filter = { _id: new ObjectId(id) };
@@ -163,6 +169,14 @@ async function run() {
         const result = await addCollections.find().toArray();
         res.send(result);
     })
+
+
+    
+
+
+
+
+
 
     // individuals Properties
     app.get('/adds' , async(req , res) => {
@@ -223,6 +237,9 @@ async function run() {
     })
 
 
+
+
+    // Reviews
     app.post('/reviews' , async(req , res) => {
         const newReview = req.body;
         console.log(newReview);
@@ -234,6 +251,109 @@ async function run() {
         const result = await reviewCollection.find().toArray();
         res.send(result);
       })
+
+      app.get('/review' , async(req , res) => {
+        let query ={};
+        if(req.query?.email){
+          query = { email: req.query.email}
+        } 
+        const result = await reviewCollection.find(query).toArray();
+        res.send(result);
+        
+      })
+
+      app.delete('/review/:id' , async(req , res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) }
+        const result = await reviewCollection.deleteOne(query);
+        res.send(result);
+    })
+
+
+    //   wish 
+    app.post('/wishes' , async(req , res) => {
+        const newWishes = req.body;
+        console.log(newWishes);
+        const result = await wishCollection.insertOne(newWishes);
+        res.send(result);
+    })
+
+    app.get('/wish' , async(req , res) => {
+        let query ={};
+        if(req.query?.email){
+          query = { email : req.query.email}
+        } 
+        const result = await wishCollection.find(query).toArray();
+        res.send(result);
+        
+      })
+
+      app.get('/wish/:id' , async(req , res) => {
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id) };
+        const result = await wishCollection.findOne(query);
+        res.send(result);
+    })
+
+    // buy
+
+    app.get('/buys' , async(req , res) => {
+        const result = await buyCollection.find().toArray();
+        res.send(result);
+      })
+
+
+      app.get('/buy' ,  async(req , res) => {
+        let query ={};
+        if(req.query?.buyerEmail){
+          query = { buyerEmail : req.query.buyerEmail}
+        } 
+        const result = await buyCollection.find(query).toArray();
+        res.send(result);
+        
+        
+      })
+
+    //   payment
+    // app.post('/create-payment-intent' , async(req , res) => {
+    //     const { price } = req.body;
+    //     const amount = parseInt(price * 100);
+    //     console.log('amount' , amount);
+    //     const paymentIntent = await stripe.paymentIntents.create({
+    //         amount: amount,
+    //         currency: 'usd',
+    //         payment_method_types: ['card']
+    //     });
+    //     res.send({
+    //         clientSecret: paymentIntent.client_secret
+    //     })
+    // })
+
+
+    app.post('/buys' , async(req , res) => {
+        const newBuys = req.body;
+        console.log(newBuys);
+        const result = await buyCollection.insertOne(newBuys);
+        res.send(result);
+    })
+
+
+    app.patch('/buys/:id' , async(req , res) => {
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)}
+        const updateDoc = req.body
+        const option = {upsert: true}
+        const updateValuess = {
+          $set: updateDoc
+  
+  
+        }
+        const result = await buyCollection.updateOne(query , updateValuess , option)
+        res.send(result)
+      })
+
+
+
 
     //   app.get('/reviews/:propertyTitle' , async(req , res) => {
     //     const propertyTitle = req.params.propertyTitle;
