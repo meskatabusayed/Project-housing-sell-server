@@ -30,7 +30,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
 
 
@@ -45,7 +45,7 @@ async function run() {
     app.post('/jwt' , async(req , res) => {
         const user = req.body;
         const token = jwt.sign(user , process.env.ACCESS_TOKEN_SECRET , {
-            expiresIn: '2h'});
+            expiresIn: '9h'});
             res.send({ token });
     })
 
@@ -166,20 +166,37 @@ async function run() {
 
     // Add related Ali
     app.get('/add' , async(req , res) => {
-        const filter = req.query;
-        console.log(filter);
-        const query = {
-          propertyTitle:{ $regex: filter.search }
-        };
-        const options = {
-          sort: {
-              minPrice: filter.sort === 'asc' ? 1: -1
-          }
-        };
+        // const filter = req.query;
+        // console.log(filter);
+        // const query = {
+        //   propertyTitle:{ $regex: filter.search , $options: 'i' }
+        // };
+        // const options = {
+        //   sort: {
+        //       minPrice: filter.sort === 'asc' ? 1: -1
+        //   }
+        // };query , options
 
-        const result = await addCollections.find(query , options).toArray();
+        const result = await addCollections.find().toArray();
         res.send(result);
     })
+
+
+    app.get('/addv' , async(req , res) => {
+      const filter = req.query;
+      console.log(filter);
+      const query = {
+        propertyTitle:{ $regex: filter.search , $options: 'i' }
+      };
+      const options = {
+        sort: {
+            minPrice: filter.sort === 'asc' ? 1: -1
+        }
+      };
+
+      const result = await addCollections.find(query , options).toArray();
+      res.send(result);
+  })
 
 
     
