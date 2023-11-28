@@ -166,7 +166,18 @@ async function run() {
 
     // Add related Ali
     app.get('/add' , async(req , res) => {
-        const result = await addCollections.find().toArray();
+        const filter = req.query;
+        console.log(filter);
+        const query = {
+          propertyTitle:{ $regex: filter.search }
+        };
+        const options = {
+          sort: {
+              minPrice: filter.sort === 'asc' ? 1: -1
+          }
+        };
+
+        const result = await addCollections.find(query , options).toArray();
         res.send(result);
     })
 
@@ -217,6 +228,7 @@ async function run() {
       })
 
     app.post('/add' , async(req , res) => {
+        
         const item = req.body;
         const result = await addCollections.insertOne(item);
         res.send(result);
