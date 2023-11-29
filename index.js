@@ -412,7 +412,7 @@ run().catch(console.dir);
 
 
 app.get('/' , (req , res) => {
-    res.send('Assignment 12 is running')
+    res.send('Assignment 12 is running now')
 })
 
 app.listen(port , () => {
